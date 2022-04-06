@@ -9,3 +9,6 @@ The script includes a few outputs to ensure that everything runs as expected.
 Prior to running the scripts, execute `. setup.sh` to ensure your environment is ready to run.
 The script repeats validation output to ensure everything is OK.
 
+## Short notes:
+[SacreBLEU](https://github.com/mjpost/sacreBLEU) has useful examples in the main README to show how to PROPERLY evaluate scores
+

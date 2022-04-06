@@ -20,3 +20,8 @@ python -c "import datasets; print('HuggingFace OK?','wmt14' in datasets.list_dat
 echo "Downloading HuggingFace Dataset for WMT14 German-English. This may take a moment."
 python -c "import datasets; wmt14 = datsets.load_dataset('wmt14', 'de-en')"
 
+# SacreBLEU Dependency for BLEU scores
+pip3 install --user sacrebleu
+# Validation
+python -c "import datasets; print('SacreBleu OK?', datasets.load_metric('sacrebleu') is not None)"
+
