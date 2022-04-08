@@ -12,6 +12,7 @@ python -c "import torch; print('Torch Install OK?',torch.cuda.is_available())"
 # Huggingfaces Dependency
 # Validation
 python -c "import datasets; print('Datasets OK?','wmt14' in datasets.list_datasets())"
+python -c "import transformers; print('HuggingFace Transformers OK?',transformers.is_torch_available())"
 
 # WMT-14 Dataset
 echo "Validate presence of WMT14 de-en"

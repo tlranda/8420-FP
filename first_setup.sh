@@ -13,8 +13,10 @@ python -c "import torch; print('Torch Install OK?',torch.cuda.is_available())"
 
 # Huggingfaces Dependency
 pip3 install --user datasets
+pip3 install --user transformers
 # Validation
-python -c "import datasets; print('HuggingFace OK?','wmt14' in datasets.list_datasets())"
+python -c "import datasets; print('HuggingFace Data OK?','wmt14' in datasets.list_datasets())"
+python -c "import transformers; print('HuggingFace Transformers OK?',transformers.is_torch_available())"
 
 # Huggingface Dataset download for WMT14
 echo "Downloading HuggingFace Dataset for WMT14 German-English. This may take a moment."
