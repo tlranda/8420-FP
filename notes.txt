@@ -1,0 +1,14 @@
+# transformer tutorial:
+after data_process(), 1d tensor of vocabulary ID's where all language IDs should be in the same continuous space
+then batchify() to split them based on bptt length and give us uniform length batches to train through
+
+you can do an off-by-one prediction task
+-or- probably more preferably
+just src->target prediction task
+
+response from transformer tutorial will include a softmax prediction per word in the batch, or you can convert this into shape [:,1] by just using the index with highest softmax value
+
+# from our setup:
+self.tokenizer([li of strs], padding='longest'|'max_length'|'do_not_pad') can pad.
+'longest' is most uniform across all contained sentences, but wasteful in memory/processing
+
