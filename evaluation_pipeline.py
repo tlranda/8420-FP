@@ -31,9 +31,9 @@ def dummy_pretrain(tok, model, tl=None, device='cpu'):
 # Using the test split from data and a lambda of de -> en, get bleu stats
 def evaluate(data, make_translate_lambda, limit=10000):
     refs, candidates = [], []
-    examples = len(data['test'])
+    examples = len(data)
     print(f"Actual total examples: {examples}")
-    for idx, tl_pair in enumerate(data['test']):
+    for idx, tl_pair in enumerate(data):
         print(f"Translating... {100*idx/min(limit,examples):5.2f}%", end='\r')
         refs.append(tl_pair['translation']['en'])
         candidates.append(make_translate_lambda(tl_pair['translation']['de']))
@@ -54,7 +54,7 @@ def main():
     tokenizer, model = get_pretrained(device=device)
     # Final evaluation
     pretrain_translator = lambda de: dummy_pretrain(tokenizer, model, tl=de, device=device)
-    print(evaluate(data, pretrain_translator))
+    print(evaluate(data['test'], pretrain_translator))
 
 if __name__ == '__main__':
     main()
