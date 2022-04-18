@@ -55,19 +55,25 @@ class torch_wrapped(torch.nn.Module):
         self.model.train()
         aggr_loss = 0.
         n_examples = 0
+        # set up batching
+        dataloader = torch.utils.data.DataLoader(data, batch_size=self.args.batch_size)
         if limit is not None:
-            end = min(limit, data.num_rows)
+            end = min(data.num_rows, limit)
+            # rephrase limit in batched terms
+            limit = ((self.args.batch_size-1)+end)//self.args.batch_size
         else:
-            end = data.num_rows
-        progress_bar = tqdm.auto.tqdm(range(end))
-        for it, example in enumerate(data):
+            limit = len(dataloader)
+        progress_bar = tqdm.auto.tqdm(range(limit), desc='Epoch: ', leave=True)
+        for it, example in enumerate(dataloader):
             if limit is not None and it >= limit:
                 break
-            de = example['translation']['de']
-            en = example['translation']['en']
+            all_examples = example['translation']['de']
+            batched = len(all_examples)
+            all_examples.extend(example['translation']['en'])
             # Tokenize and Mask
-            tokenized = self.tokenize([de,en])
-            src_inputs, tgt_inputs = tokenized['input_ids']
+            all_tokenized = self.tokenize(all_examples)
+            src_inputs = all_tokenized['input_ids'][:self.args.batch_size,:]
+            tgt_inputs = all_tokenized['input_ids'][self.args.batch_size:,:]
             #src_mask, tgt_mask = tokenized['attention_mask']
             # Forward
             outputs, target = self.forward(src_inputs, tgt_inputs)
@@ -78,7 +84,7 @@ class torch_wrapped(torch.nn.Module):
             loss.backward()
             self.optimizer.step()
             aggr_loss += loss.item()
-            n_examples += 1
+            n_examples += batched
             progress_bar.update(1)
         return aggr_loss / n_examples
 
@@ -87,11 +93,14 @@ class torch_wrapped(torch.nn.Module):
         with torch.no_grad():
             tokenize = self.tokenize(de)
             outputs, _ = self.forward(tokenize['input_ids'], tokenize['input_ids'])
-            outputs = outputs[0].cpu()
-            distance = torch.vstack([torch.norm(self.embeddings.weight.data - out, dim=1) for out in outputs])
-            prediction = torch.argmax(distance, dim=-1)
-            str_form = self.tokenizer.decode(prediction)
-        return str_form
+            outputs = outputs.cpu()
+            li_strs = []
+            for bid, batch in enumerate(outputs):
+                # Get per token argmax by nearest embedding (best guess at intended word)
+                words = [torch.argmax(torch.norm(self.embeddings.weight.data - word, dim=1)) for word in batch]
+                # Convert these tokens back using the tokenizer
+                li_strs.append(self.tokenizer.decode(words))
+        return li_strs
 
 # Attributes to be accessed from this file as a module
 choices = ['default']

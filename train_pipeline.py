@@ -1,5 +1,6 @@
 import torch
 import datasets
+import tqdm
 import argparse
 from evaluation_pipeline import (
     load_wmt14,
@@ -17,7 +18,8 @@ def build():
     prs.add_argument('--lr', type=float, default=20, help='Initial learning rate')
     prs.add_argument('--clip', type=float, default=0.25, help='Gradient Clipping')
     prs.add_argument('--epochs', type=int, default=40, help='Upper epoch limit')
-    prs.add_argument('--batch_size', type=int, default=20, help='Batch size')
+    prs.add_argument('--batch-size', type=int, default=256, help='Training batch size')
+    prs.add_argument('--eval-size', type=int, default=10, help='Evaluation batch size (usually should be significantly lower than train)')
     prs.add_argument('--bptt', type=int, default=35, help='Sequence length')
     prs.add_argument('--dropout', type=float, default=0.2, help='Dropout per layer (0 = no dropout)')
     prs.add_argument('--seed', type=int, default=2022, help='RNG Seed')
@@ -43,12 +45,14 @@ def main(args):
     # Create model
     transformer = models.lookup[args.model](args)
     # Train
+    epoch_bar = tqdm.auto.tqdm(range(args.epochs), desc="Training: ", unit='epoch', leave=False)
     for epoch in range(1, args.epochs+1):
-        transformer.train(data['train'], limit=args.train_limit)
+        loss = transformer.train(data['train'], limit=args.train_limit)
         # Validate
+        epoch_bar.update(1)
     # Final evaluation
     trained_translator = lambda de: transformer.evaluate(de)
-    print(evaluate(data['test'], trained_translator, limit=args.eval_limit))
+    print(evaluate(data['test'], trained_translator, batch_size=args.eval_size, limit=args.eval_limit))
 
 if __name__ == '__main__':
     main(parse(build()))
