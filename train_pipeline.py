@@ -31,6 +31,7 @@ def parse(prs, args=None):
     return args
 
 def main(args):
+    print(args)
     # Select device
     device = 'cpu' if not torch.cuda.is_available() else 'cuda:0'
     if device == 'cpu':
