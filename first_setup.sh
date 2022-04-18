@@ -27,3 +27,8 @@ pip3 install --user sacrebleu
 # Validation
 python -c "import datasets; print('SacreBleu OK?', datasets.load_metric('sacrebleu') is not None)"
 
+# TQDM for training bars
+pip3 install --user tqdm
+# Validation
+python -c "import tqdm; print('TQDM version', tqdm.__version__)"
+

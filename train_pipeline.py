@@ -21,6 +21,8 @@ def build():
     prs.add_argument('--bptt', type=int, default=35, help='Sequence length')
     prs.add_argument('--dropout', type=float, default=0.2, help='Dropout per layer (0 = no dropout)')
     prs.add_argument('--seed', type=int, default=2022, help='RNG Seed')
+    prs.add_argument('--eval-limit', type=int, default=None, help='Maximum number of examples to evaluate (default all)')
+    prs.add_argument('--train-limit', type=int, default=None, help='Maximum number of examples to train each epoch (default all)')
     return prs
 
 # Any postprocessing to validate or prepare arguments
@@ -42,11 +44,11 @@ def main(args):
     transformer = models.lookup[args.model](args)
     # Train
     for epoch in range(1, args.epochs+1):
-        transformer.train(data['train'])
+        transformer.train(data['train'], limit=args.train_limit)
         # Validate
     # Final evaluation
     trained_translator = lambda de: transformer.evaluate(de)
-    print(evaluate(data['test'], trained_translator))
+    print(evaluate(data['test'], trained_translator, limit=args.eval_limit))
 
 if __name__ == '__main__':
     main(parse(build()))

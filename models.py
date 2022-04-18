@@ -1,18 +1,18 @@
 import torch
 import transformers
-import pdb
+import tqdm
 
 # Main inheritance class that defines the Train/Eval API all other models (subclassed) should use
 class torch_wrapped(torch.nn.Module):
     def __init__(self, args):
         super().__init__()
         self.args = args
-        self.create_model(args)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr)
-        self.loss_fn = torch.nn.CrossEntropyLoss()
         self.tokenizer = transformers.AutoTokenizer.from_pretrained("google/bert2bert_L-24_wmt_de_en")
         # Have to use len(tokenizer) rather than tokenizer.vocab_size since the two former allows for things like [PAD] tokens to not break things
         self.embeddings = torch.nn.Embedding(len(self.tokenizer), args.nhid)
+        self.create_model(args)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr)
+        self.loss_fn = torch.nn.CrossEntropyLoss()
 
     # Function to be extended/overwritten by subclasses, which should inject necessary modifications into the basic model architecture
     def create_model(self, args):
@@ -42,7 +42,7 @@ class torch_wrapped(torch.nn.Module):
         # Process for creating embeddings
         return self.embeddings(input_ids)
 
-    def forward(self, src_in, src_mask, tgt_in, tgt_mask):
+    def forward(self, src_in, tgt_in, src_mask=None, tgt_mask=None):
         # Get embeddings and put them on device
         embed_src = self.embed(src_in).to(self.args.device)
         embed_tgt = self.embed(tgt_in).to(self.args.device)
@@ -51,16 +51,17 @@ class torch_wrapped(torch.nn.Module):
         return self.model(src=embed_src, src_mask=src_mask, tgt=embed_tgt, tgt_mask=tgt_mask), embed_tgt
 
     # Performs all training for the given dataset
-    def train(self, data):
+    def train(self, data, limit=None):
         self.model.train()
         aggr_loss = 0.
         n_examples = 0
-        import tqdm
-        maxn = 500
-        end = min(maxn, data.num_rows)
+        if limit is not None:
+            end = min(limit, data.num_rows)
+        else:
+            end = data.num_rows
         progress_bar = tqdm.auto.tqdm(range(end))
         for it, example in enumerate(data):
-            if it >= end:
+            if limit is not None and it >= limit:
                 break
             de = example['translation']['de']
             en = example['translation']['en']
@@ -69,7 +70,7 @@ class torch_wrapped(torch.nn.Module):
             src_inputs, tgt_inputs = tokenized['input_ids']
             #src_mask, tgt_mask = tokenized['attention_mask']
             # Forward
-            outputs, target = self.forward(src_inputs, None, tgt_inputs, None)
+            outputs, target = self.forward(src_inputs, tgt_inputs)
             softmax = torch.nn.functional.log_softmax(outputs, dim=-1)
             # Optimization
             self.optimizer.zero_grad()
@@ -83,9 +84,14 @@ class torch_wrapped(torch.nn.Module):
 
     # Performs single-example inference for evaluation pipeline
     def evaluate(self, de):
-        tokenize = self.tokenize(de)
-        pdb.set_trace()
-        outputs = self.forward(tokenize['input_ids'])
+        with torch.no_grad():
+            tokenize = self.tokenize(de)
+            outputs, _ = self.forward(tokenize['input_ids'], tokenize['input_ids'])
+            outputs = outputs[0].cpu()
+            distance = torch.vstack([torch.norm(self.embeddings.weight.data - out, dim=1) for out in outputs])
+            prediction = torch.argmax(distance, dim=-1)
+            str_form = self.tokenizer.decode(prediction)
+        return str_form
 
 # Attributes to be accessed from this file as a module
 choices = ['default']

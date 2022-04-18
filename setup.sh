@@ -22,3 +22,7 @@ python -c "import datasets; print(datasets.load_dataset('wmt14','de-en'))"
 # Validation
 python -c "import datasets; print('SacreBleu OK?', datasets.load_metric('sacrebleu') is not None)"
 
+# TQDM for training bars
+# Validation
+python -c "import tqdm; print('TQDM version', tqdm.__version__)"
+
