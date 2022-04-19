@@ -49,6 +49,7 @@ def main(args):
     for epoch in range(1, args.epochs+1):
         loss = transformer.train(data['train'], limit=args.train_limit)
         # Validate
+        epoch_bar.set_postfix(loss=loss)
         epoch_bar.update(1)
     # Final evaluation
     trained_translator = lambda de: transformer.evaluate(de)
