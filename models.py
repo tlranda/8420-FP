@@ -11,12 +11,22 @@ class torch_wrapped(torch.nn.Module):
         super().__init__()
         self.args = args
         self.avail = 'cpu' if not args.device.startswith('cuda') else torch.cuda.get_device_properties(args.device).total_memory
+        self.skip_batch = torch.load(args.skip_load) if args.skip_load is not None else list()
         self.tokenizer = transformers.AutoTokenizer.from_pretrained("google/bert2bert_L-24_wmt_de_en")
         # Have to use len(tokenizer) rather than tokenizer.vocab_size since the two former allows for things like [PAD] tokens to not break things
         self.embeddings = torch.nn.Embedding(len(self.tokenizer), args.nhid)
         self.create_model(args)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr)
         self.loss_fn = torch.nn.CrossEntropyLoss()
+
+    def update_default_pbar(self):
+        # Set default info for progress bar update
+        if self.args.device.startswith('cuda'):
+            self.default_pbar = {'alloc': f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}",
+                                 'reserved': f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}",
+                                 'max': self.avail,}
+        elif self.default_pbar is None:
+            self.default_pbar = {'cpu': 'TRUE'}
 
     # Function to be extended/overwritten by subclasses, which should inject necessary modifications into the basic model architecture
     def create_model(self, args):
@@ -55,32 +65,9 @@ class torch_wrapped(torch.nn.Module):
         return self.model(src=embed_src, src_mask=src_mask, tgt=embed_tgt, tgt_mask=tgt_mask), embed_tgt
 
     # Stably handles known exceptions as efficiently as possible
-    def train_batch(self, all_examples=None, src_inputs=None, tgt_inputs=None):
-        # Tokenize if given all_examples
-        if all_examples is not None:
-            try:
-                all_tokenized = self.tokenize(all_examples)
-            except Exception:
-                # NOT FOR PRODUCTION: Find UNK in training input and address it by adding to the .replace() chain
-                # Rebuild and resubmit with clean input
-                all_tokenized = {}
-                for idx, ex in enumerate(all_examples):
-                    try:
-                        tok = self.tokenize(ex)
-                    except Exception as e:
-                        # This one couldn't be tokenized
-                        pass
-                    else:
-                        for k, v in tok.items():
-                            if k not in all_tokenized.keys():
-                                all_tokenized[k] = v
-                            else:
-                                all_tokenized[k] = torch.vstack([v, all_tokenized[k]])
-            src_inputs = all_tokenized['input_ids'][:self.args.batch_size,:]
-            tgt_inputs = all_tokenized['input_ids'][self.args.batch_size:,:]
+    def train_batch(self, src_inputs=None, tgt_inputs=None):
         # Forward may run OOM when things get pushed to device (or during optimization? unlikely but I'll catch it anyways)
         try:
-            # FOR EPOCH SWEEP, SKIP THIS
             outputs, target = self.forward(src_inputs, tgt_inputs)
             softmax = torch.nn.functional.log_softmax(outputs, dim=-1)
             # Optimization
@@ -95,17 +82,24 @@ class torch_wrapped(torch.nn.Module):
             pass
         except Exception as e: # Weird bug, i think it's gone now
             print("\nunknown bug:")
-            print(all_examples is None, src_inputs is None, tgt_inputs is None)
-            print(e.message)
-            pdb.set_trace()
+            print(src_inputs is None, tgt_inputs is None)
+            if hasattr(e, 'message'):
+                print(e.message)
+            return 0 # Production: Pretend nothing happened
+            #pdb.set_trace()
         # Only reach this part if there's a problem
         # Recurse on half-sizes to rapidly handle issues. If only at one size anyways, we don't catch the exception
         # Split the batch but keep the tokenization
         n_inputs = src_inputs.shape[0]
         if n_inputs == 1:
             raise ValueError("Cannot recurse to sub-example level")
-        return self.train_batch(src_inputs=src_inputs[:n_inputs//2], tgt_inputs=tgt_inputs[:n_inputs//2]) +\
-               self.train_batch(src_inputs=src_inputs[n_inputs//2:], tgt_inputs=tgt_inputs[n_inputs//2:])
+        return self.train_batch(src_inputs=src_inputs[:n_inputs//2,:], tgt_inputs=tgt_inputs[:n_inputs//2,:]) +\
+               self.train_batch(src_inputs=src_inputs[n_inputs//2:,:], tgt_inputs=tgt_inputs[n_inputs//2:,:])
+
+    def pbar_update(self, pbar, **extra):
+        self.update_default_pbar()
+        pbar.set_postfix(**self.default_pbar, **extra)
+        pbar.update(1)
 
     # Performs all training for the given dataset
     def train(self, data, limit=None):
@@ -121,20 +115,45 @@ class torch_wrapped(torch.nn.Module):
         else:
             limit = len(dataloader)
         progress_bar = tqdm.auto.tqdm(range(limit), desc='Epoch: ', leave=False)
+        #debug = 12680
+        broken = 0
+        too_big = 0
         for it, example in enumerate(dataloader):
+            #if it < debug:
+            #    self.pbar_update(progress_bar, skip=f"{it+1}/{debug}")
+            #    continue
             if limit is not None and it >= limit:
                 break
-            all_examples = example['translation']['de']
-            batched = len(all_examples)
-            all_examples.extend(example['translation']['en'])
+            if it in self.skip_batch:
+                self.pbar_update(progress_bar, broken=broken, too_big=too_big)
+                continue
+            try:
+                # Have to match shape
+                tok_batch = example['translation']['de']
+                n_de = len(tok_batch)
+                tok_batch.extend(example['translation']['en'])
+                n_en = len(tok_batch) - n_de
+                assert n_de == n_en
+                toks = self.tokenize(tok_batch)['input_ids']
+                srcs = toks[:n_de]
+                tgts = toks[n_de:]
+            except Exception:
+                broken = broken + 1
+                self.skip_batch.append(it)
+                self.pbar_update(progress_bar, broken=broken, too_big=too_big)
+                continue
+            batched = n_de
             # Will handle OOM and known tokenization issues
-            aggr_loss += self.train_batch(all_examples=all_examples)
+            try:
+                aggr_loss += self.train_batch(srcs, tgts)
+            except ValueError:
+                # Could not handle batch
+                too_big = too_big + 1
+                self.skip_batch.append(it)
+                self.pbar_update(progress_bar, broken=broken, too_big=too_big)
+                continue
             n_examples += batched
-            if self.args.device.startswith('cuda'):
-                progress_bar.set_postfix(alloc=f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}", reserved=f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}", max=self.avail)
-            else:
-                progress_bar.set_postfix(mem="running on cpu")
-            progress_bar.update(1)
+            self.pbar_update(progress_bar, broken=broken, too_big=too_big)
         return aggr_loss / n_examples
 
     # Performs single-example inference for evaluation pipeline

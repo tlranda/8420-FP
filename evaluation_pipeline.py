@@ -37,6 +37,8 @@ def evaluate(data, make_translate_lambda, batch_size=10, limit=None):
     dataloader = torch.utils.data.DataLoader(data, batch_size=batch_size)
     if limit is not None:
         end = min(data.num_rows, limit)
+        if end == 0:
+            return None
         # rephrase limit in batched terms
         limit = ((batch_size-1)+end) // batch_size
     else:

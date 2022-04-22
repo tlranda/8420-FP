@@ -16,17 +16,17 @@ def build():
     prs.add_argument('--nlayers', type=int, default=2, help='Number of layers')
     prs.add_argument('--nhead', type=int, default=2, help='Number of heads in encoder/decoder blocks')
     prs.add_argument('--lr', type=float, default=20, help='Initial learning rate')
-    prs.add_argument('--clip', type=float, default=0.25, help='Gradient Clipping')
+    prs.add_argument('--dropout', type=float, default=0.2, help='Dropout per layer (0 = no dropout)')
     prs.add_argument('--epochs', type=int, default=40, help='Upper epoch limit')
     prs.add_argument('--batch-size', type=int, default=256, help='Training batch size')
     prs.add_argument('--eval-size', type=int, default=10, help='Evaluation batch size (usually should be significantly lower than train)')
-    prs.add_argument('--bptt', type=int, default=35, help='Sequence length')
-    prs.add_argument('--dropout', type=float, default=0.2, help='Dropout per layer (0 = no dropout)')
     prs.add_argument('--seed', type=int, default=2022, help='RNG Seed')
     prs.add_argument('--eval-limit', type=int, default=None, help='Maximum number of examples to evaluate (default all)')
     prs.add_argument('--train-limit', type=int, default=None, help='Maximum number of examples to train each epoch (default all)')
     prs.add_argument('--save', type=str, default=None, help='Path and prefix to save epoch results to (default None)')
     prs.add_argument('--load', type=str, default=None, help='Path and prefix to load partial results from (default None)')
+    prs.add_argument('--skip-load', type=str, default=None, help='Path to load serialized batch ids to skip from (default None)')
+    prs.add_argument('--skip-save', type=str, default=None, help='Path to save serialized batch ids to skip to (default None)')
     return prs
 
 # Any postprocessing to validate or prepare arguments
@@ -45,11 +45,13 @@ def main(args):
     # Fetch dataset
     data = load_wmt14()
     # Create model
+    transformer = models.lookup[args.model](args)
     if args.load is None:
-        transformer = models.lookup[args.model](args)
         epoch_start = 1
     else:
-        transformer = torch.load(args.load)
+        # Load state dict
+        transformer_params = torch.load(args.load)
+        transformer.load_state_dict(transformer_params)
         # Saved as prefix..epoch_######.pt
         epoch_start = int(args.load[args.load.index('epoch_')+len('epoch_'):-3])
     # Train
@@ -58,10 +60,13 @@ def main(args):
         loss = transformer.train(data['train'], limit=args.train_limit)
         # Save
         if args.save is not None:
-            torch.save(transformer, args.save+'epoch_'+str(epoch)+'.pt')
+            torch.save(transformer.state_dict(), args.save+'epoch_'+str(epoch)+'.pt')
         # Validate
         epoch_bar.set_postfix(loss=loss)
         epoch_bar.update(1)
+    # Serialize skippable batches
+    if args.skip_save is not None:
+        torch.save(transformer.skip_batch, args.skip_save)
     # Final evaluation
     trained_translator = lambda de: transformer.evaluate(de)
     print(evaluate(data['test'], trained_translator, batch_size=args.eval_size, limit=args.eval_limit))
