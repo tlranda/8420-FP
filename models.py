@@ -10,6 +10,7 @@ class torch_wrapped(torch.nn.Module):
     def __init__(self, args):
         super().__init__()
         self.args = args
+        self.avail = 'cpu' if not args.device.startswith('cuda') else torch.cuda.get_device_properties(args.device).total_memory
         self.tokenizer = transformers.AutoTokenizer.from_pretrained("google/bert2bert_L-24_wmt_de_en")
         # Have to use len(tokenizer) rather than tokenizer.vocab_size since the two former allows for things like [PAD] tokens to not break things
         self.embeddings = torch.nn.Embedding(len(self.tokenizer), args.nhid)
@@ -69,11 +70,12 @@ class torch_wrapped(torch.nn.Module):
                     except Exception as e:
                         # This one couldn't be tokenized
                         pass
-                    for k, v in tok.items():
-                        if k not in all_tokenized.keys():
-                            all_tokenized[k] = v
-                        else:
-                            all_tokenized[k] = torch.vstack([v, all_tokenized[k]])
+                    else:
+                        for k, v in tok.items():
+                            if k not in all_tokenized.keys():
+                                all_tokenized[k] = v
+                            else:
+                                all_tokenized[k] = torch.vstack([v, all_tokenized[k]])
             src_inputs = all_tokenized['input_ids'][:self.args.batch_size,:]
             tgt_inputs = all_tokenized['input_ids'][self.args.batch_size:,:]
         # Forward may run OOM when things get pushed to device (or during optimization? unlikely but I'll catch it anyways)
@@ -119,19 +121,17 @@ class torch_wrapped(torch.nn.Module):
         else:
             limit = len(dataloader)
         progress_bar = tqdm.auto.tqdm(range(limit), desc='Epoch: ', leave=False)
-        def str_fixer(s):
-            return bad_chars.sub('', s)
         for it, example in enumerate(dataloader):
             if limit is not None and it >= limit:
                 break
-            all_examples = [str_fixer(_) for _ in example['translation']['de']]
+            all_examples = example['translation']['de']
             batched = len(all_examples)
-            all_examples.extend([str_fixer(_) for _ in example['translation']['en']])
+            all_examples.extend(example['translation']['en'])
             # Will handle OOM and known tokenization issues
             aggr_loss += self.train_batch(all_examples=all_examples)
             n_examples += batched
             if self.args.device.startswith('cuda'):
-                progress_bar.set_postfix(alloc=f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}", reserved=f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}", max=avail)
+                progress_bar.set_postfix(alloc=f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}", reserved=f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}", max=self.avail)
             else:
                 progress_bar.set_postfix(mem="running on cpu")
             progress_bar.update(1)

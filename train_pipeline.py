@@ -25,6 +25,8 @@ def build():
     prs.add_argument('--seed', type=int, default=2022, help='RNG Seed')
     prs.add_argument('--eval-limit', type=int, default=None, help='Maximum number of examples to evaluate (default all)')
     prs.add_argument('--train-limit', type=int, default=None, help='Maximum number of examples to train each epoch (default all)')
+    prs.add_argument('--save', type=str, default=None, help='Path and prefix to save epoch results to (default None)')
+    prs.add_argument('--load', type=str, default=None, help='Path and prefix to load partial results from (default None)')
     return prs
 
 # Any postprocessing to validate or prepare arguments
@@ -43,11 +45,20 @@ def main(args):
     # Fetch dataset
     data = load_wmt14()
     # Create model
-    transformer = models.lookup[args.model](args)
+    if args.load is None:
+        transformer = models.lookup[args.model](args)
+        epoch_start = 1
+    else:
+        transformer = torch.load(args.load)
+        # Saved as prefix..epoch_######.pt
+        epoch_start = int(args.load[args.load.index('epoch_')+len('epoch_'):-3])
     # Train
-    epoch_bar = tqdm.auto.tqdm(range(args.epochs), desc="Training: ", unit='epoch', leave=False)
-    for epoch in range(1, args.epochs+1):
+    epoch_bar = tqdm.auto.tqdm(range(epoch_start, args.epochs+1), desc="Training: ", unit='epoch', leave=False)
+    for epoch in range(epoch_start, args.epochs+1):
         loss = transformer.train(data['train'], limit=args.train_limit)
+        # Save
+        if args.save is not None:
+            torch.save(transformer, args.save+'epoch_'+str(epoch)+'.pt')
         # Validate
         epoch_bar.set_postfix(loss=loss)
         epoch_bar.update(1)
