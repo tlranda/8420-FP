@@ -16,11 +16,13 @@ class torch_wrapped(torch.nn.Module):
         if args.nhid is not None:
             # Have to use len(tokenizer) rather than tokenizer.vocab_size since the two former allows for things like [PAD] tokens to not break things
             self.embeddings = torch.nn.Embedding(len(self.tokenizer), args.nhid)
+            self.pad_fix = False
         else:
             # IS NOT identical to the WMT'14 de-en dataset, but better than nothing and at least includes english I guess?
             self.embeddings = transformers.AutoModelForSeq2SeqLM.from_pretrained('google/bert2bert_L-24_wmt_de_en').get_input_embeddings()
             #self.embeddings.padding_idx = 31950
             args.nhid = self.embeddings.weight.shape[1]
+            self.pad_fix = True
         self.create_model(args)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr)
         self.loss_fn = torch.nn.CrossEntropyLoss()
@@ -56,6 +58,10 @@ class torch_wrapped(torch.nn.Module):
             kwargs['padding'] = 'longest'
         # May add special tokens like [CLS], [SEP], and [PAD]. Also note that BERT's tokenizer can break individual words into multiple pieces
         toks = self.tokenizer(de_or_en, **kwargs)
+        # Fix pad tokens to be zero instead of 31591
+        if self.pad_fix:
+            mask = toks['input_ids'] == 31951
+            toks['input_ids'][mask] = 0
         return toks
 
     def embed(self, input_ids):
@@ -92,7 +98,6 @@ class torch_wrapped(torch.nn.Module):
             if hasattr(e, 'message'):
                 print(e.message)
             return 0 # Production: Pretend nothing happened
-            #pdb.set_trace()
         # Only reach this part if there's a problem
         # Recurse on half-sizes to rapidly handle issues. If only at one size anyways, we don't catch the exception
         # Split the batch but keep the tokenization

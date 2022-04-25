@@ -44,12 +44,15 @@ def evaluate(data, make_translate_lambda, batch_size=10, limit=None):
     else:
         limit = len(dataloader)
     eval_bar = tqdm.auto.tqdm(range(limit), desc='Evaluation: ', leave=False)
+    errors = 0
     for idx, tl_pair in enumerate(dataloader):
         if limit is not None and idx >= limit:
             break
         try:
             predicted_candidates = [[_] for _ in make_translate_lambda(tl_pair['translation']['de'])]
         except IndexError:
+            errors = errors + 1
+            eval_bar.set_postfix(errors=errors)
             eval_bar.update(1)
             continue
         candidates.extend(predicted_candidates)
