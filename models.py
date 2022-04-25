@@ -13,8 +13,14 @@ class torch_wrapped(torch.nn.Module):
         self.avail = 'cpu' if not args.device.startswith('cuda') else torch.cuda.get_device_properties(args.device).total_memory
         self.skip_batch = torch.load(args.skip_load) if args.skip_load is not None else list()
         self.tokenizer = transformers.AutoTokenizer.from_pretrained("google/bert2bert_L-24_wmt_de_en")
-        # Have to use len(tokenizer) rather than tokenizer.vocab_size since the two former allows for things like [PAD] tokens to not break things
-        self.embeddings = torch.nn.Embedding(len(self.tokenizer), args.nhid)
+        if args.nhid is not None:
+            # Have to use len(tokenizer) rather than tokenizer.vocab_size since the two former allows for things like [PAD] tokens to not break things
+            self.embeddings = torch.nn.Embedding(len(self.tokenizer), args.nhid)
+        else:
+            # IS NOT identical to the WMT'14 de-en dataset, but better than nothing and at least includes english I guess?
+            self.embeddings = transformers.AutoModelForSeq2SeqLM.from_pretrained('google/bert2bert_L-24_wmt_de_en').get_input_embeddings()
+            #self.embeddings.padding_idx = 31950
+            args.nhid = self.embeddings.weight.shape[1]
         self.create_model(args)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr)
         self.loss_fn = torch.nn.CrossEntropyLoss()
@@ -81,7 +87,7 @@ class torch_wrapped(torch.nn.Module):
             # Have to exit the try/except clause to de-allocate any tensors created in the block
             pass
         except Exception as e: # Weird bug, i think it's gone now
-            print("\nunknown bug:")
+            print("\nunknown bug:",e.__name__)
             print(src_inputs is None, tgt_inputs is None)
             if hasattr(e, 'message'):
                 print(e.message)
@@ -146,15 +152,25 @@ class torch_wrapped(torch.nn.Module):
             # Will handle OOM and known tokenization issues
             try:
                 aggr_loss += self.train_batch(srcs, tgts)
+            except IndexError:
+                # Could not tokenize part of the batch
+                broken = broken + 1
+                self.skip_batch.append(it)
+                self.pbar_update(progress_bar, broken=broken, too_big=too_big)
+                continue
             except ValueError:
                 # Could not handle batch
                 too_big = too_big + 1
                 self.skip_batch.append(it)
                 self.pbar_update(progress_bar, broken=broken, too_big=too_big)
                 continue
-            n_examples += batched
+            except Exception:
+                # Unknown, but don't count it as normally computed
+                pass
+            else:
+                n_examples += batched
             self.pbar_update(progress_bar, broken=broken, too_big=too_big)
-        return aggr_loss / n_examples
+        return aggr_loss / n_examples if n_examples != 0 else 0
 
     # Performs single-example inference for evaluation pipeline
     def evaluate(self, de):

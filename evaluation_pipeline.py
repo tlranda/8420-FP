@@ -47,8 +47,13 @@ def evaluate(data, make_translate_lambda, batch_size=10, limit=None):
     for idx, tl_pair in enumerate(dataloader):
         if limit is not None and idx >= limit:
             break
+        try:
+            predicted_candidates = [[_] for _ in make_translate_lambda(tl_pair['translation']['de'])]
+        except IndexError:
+            eval_bar.update(1)
+            continue
+        candidates.extend(predicted_candidates)
         refs.extend([[_] for _ in tl_pair['translation']['en']])
-        candidates.extend([[_] for _ in make_translate_lambda(tl_pair['translation']['de'])])
         eval_bar.update(1)
     bleu_scorer = load_sacrebleu()
     print()

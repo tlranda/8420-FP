@@ -12,7 +12,7 @@ import models
 def build():
     prs = argparse.ArgumentParser()
     prs.add_argument('--model', type=str, choices=models.choices, default=models.choices[0], help='Model to train')
-    prs.add_argument('--nhid', type=int, default=256, help='Hidden units per layer')
+    prs.add_argument('--nhid', type=int, default=None, help='Hidden units per layer (Leave unspecified to use pretrained BERT embeddings)')
     prs.add_argument('--nlayers', type=int, default=2, help='Number of layers')
     prs.add_argument('--nhead', type=int, default=2, help='Number of heads in encoder/decoder blocks')
     prs.add_argument('--lr', type=float, default=20, help='Initial learning rate')
