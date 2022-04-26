@@ -29,13 +29,13 @@ real    36m33.081s
 3. Evaluation Pipeline
    + [:white_check_mark:] Using a dummy model that can "cheat," show how the dataset can be loaded, iterated for training
    + [:white_check_mark:] Get semantic evaluation of quality (BLEU score) for the dummy model's predictions
-   + [:arrows_counterclockwise:] Get hardware metrics about performance of the dummy model (memory consumption, FLOP/s, walltime, cache utilization, etc)
+   + [:x:] [SCOPE CUT] Get hardware metrics about performance of the dummy model (memory consumption, FLOP/s, walltime, cache utilization, etc)
 5. Trainable Transformers
    + [:white_check_mark:] Basic transformer model (use pytorch transformer models)
-   + [:arrows_counterclockwise:] Locality Sensitive Hashed Attention
-   + [:arrows_counterclockwise:] Reversible Transformer
-   + [:arrows_counterclockwise:] Chunked Parameter Groups
-   + [:orange_square:] Reformer transformer model (may be from paper source or simply combine all techniques)
+   + [:x:] [SCOPE CUT] Locality Sensitive Hashed Attention
+   + [:x:] [SCOPE CUT] Reversible Transformer
+   + [:x:] [SCOPE CUT] Chunked Parameter Groups
+   + [:arrows_counterclockwise:] Reformer transformer model (may be from paper source or simply combine all techniques)
 6. Evaluation and Report
    + [:pushpin:] Use Pipeline to get semantic and hardware metrics for all built transformers
    + [:chart_with_upwards_trend:] Generate meaningful tables, graphics to explain key insights from ablative study
