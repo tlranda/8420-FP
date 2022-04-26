@@ -42,7 +42,7 @@ def build():
     prs.add_argument('--remove', '--rm', type=str, nargs='*', default=None, help='Files to ignore from compiled lists (default None)')
     # Specify how the model should be loaded
     prs.add_argument('--model', type=str, choices=choices, default=choices[0], help='Model used to train (MUST MATCH FOR ALL FILES)')
-    prs.add_argument('--nhid', type=int, default=256, help='Hidden units per layer')
+    prs.add_argument('--nhid', type=int, default=None, help='Hidden units per layer (default PreTrainedBERT)')
     prs.add_argument('--nlayers', type=int, default=2, help='Number of layers')
     prs.add_argument('--nhead', type=int, default=2, help='Number of heads in encoder/decoder blocks')
     prs.add_argument('--lr', type=float, default=20, help='Initial learning rate')
