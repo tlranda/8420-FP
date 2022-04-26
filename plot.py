@@ -8,6 +8,7 @@ def build():
     prs = argparse.ArgumentParser()
     prs.add_argument('--trains', nargs='*', default=None, required=True, type=str, help='Parsed training data in JSON format')
     prs.add_argument('--evals', nargs='*', default=None, required=True, type=str, help='Parsed evaluation data in JSON format')
+    prs.add_argument('--save', default=None, type=str, help='Prefix to save images to (default to direct display figures)')
     return prs
 
 def parse(prs, args=None):
@@ -48,13 +49,110 @@ def train_eval_merge(ts, es):
                 merged[tr_key][epoch_key]['score'] = es[tr_key][int(epoch_key)-1]
     return merged
 
+
+def time_per_epoch_plot(series, **kwargs):
+    fig = plt.figure()
+    def time_to_seconds(s):
+        fields = s.split(':')
+        values = [1, 60, 60, 24, 7, 52]
+        scalar = 1
+        time = 0
+        for f, v in zip(fields[::-1], values):
+            scalar *= v
+            time += scalar * int(f)
+        return time
+    choice = lambda x, y: kwargs[x] if x in kwargs.keys() else y
+    nth_choice = lambda x, n: kwargs[x][n] if x in kwargs.keys() else n
+    if type(series[0]) is list:
+        for idx, miniseries in enumerate(series):
+            seconds = [time_to_seconds(_) for _ in miniseries]
+            epochs = [_ for _ in range(len(seconds))]
+            plt.plot(epochs, seconds, label=nth_choice('series_name', idx))
+        plt.legend()
+    else:
+        seconds = [time_to_seconds(_) for _ in series]
+        epochs = [_ for _ in range(len(seconds))]
+        plt.plot(epochs, seconds)
+    plt.xlabel(choice('xlabel', 'Epoch'))
+    plt.ylabel(choice('ylabel', 'Epoch Duration (s)'))
+    plt.title(choice('title', 'Training Time per Epoch'))
+    return fig
+
+def examples_per_epoch_plot(series, **kwargs):
+    fig = plt.figure()
+    choice = lambda x, y: kwargs[x] if x in kwargs.keys() else y
+    nth_choice = lambda x, n: kwargs[x][n] if x in kwargs.keys() else n
+    if type(series[0]) is list:
+        for idx, miniseries in enumerate(series):
+            epochs = [_ for _ in range(len(miniseries))]
+            plt.plot(epochs, miniseries, label=nth_choice('series_name', idx))
+        plot.legend()
+    else:
+        epochs = [_ for _ in range(len(series))]
+        plt.plot(epochs, series)
+    plt.xlabel(choice('xlabel', 'Epoch'))
+    plt.ylabel(choice('ylabel', 'Training Examples Seen'))
+    plt.title(choice('title', 'Training Examples per Epoch'))
+    return fig
+
+def loss_per_epoch_plot(series, **kwargs):
+    fig = plt.figure()
+    choice = lambda x, y: kwargs[x] if x in kwargs.keys() else y
+    nth_choice = lambda x, n: kwargs[x][n] if x in kwargs.keys() else n
+    if type(series[0]) is list:
+        for idx, miniseries in enumerate(series):
+            epochs = [_ for _ in range(len(miniseries))]
+            plt.plot(epochs, miniseries, label=nth_choice('series_name', idx))
+        plot.legend()
+    else:
+        epochs = [_ for _ in range(len(series))]
+        plt.plot(epochs, series)
+    plt.xlabel(choice('xlabel', 'Epoch'))
+    plt.ylabel(choice('ylabel', 'Loss'))
+    plt.title(choice('title', 'Loss per Epoch'))
+    return fig
+
+def score_per_epoch_plot(series, **kwargs):
+    fig = plt.figure()
+    choice = lambda x, y: kwargs[x] if x in kwargs.keys() else y
+    nth_choice = lambda x, n: kwargs[x][n] if x in kwargs.keys() else n
+    if type(series[0]) is list:
+        for idx, miniseries in enumerate(series):
+            epochs = [_ for _ in range(len(miniseries))]
+            plt.plot(epochs, miniseries, label=nth_choice('series_name', idx))
+        plot.legend()
+    else:
+        epochs = [_ for _ in range(len(series))]
+        plt.plot(epochs, series)
+    plt.xlabel(choice('xlabel', 'Epoch'))
+    plt.ylabel(choice('ylabel', 'BLEU Score'))
+    plt.title(choice('title', 'BLEU Score per Epoch'))
+    return fig
+
 def plot(data):
-    pass
+    figs = []
+    for k,v in data.items():
+        print(f"Plots for {k}")
+        tf = time_per_epoch_plot([vv['time'] for vv in v.values()])
+        ef = examples_per_epoch_plot([vv['seen'] for vv in v.values()])
+        lf = loss_per_epoch_plot([vv['loss'] for vv in v.values()])
+        sf = score_per_epoch_plot([vv['score'] for vv in v.values()])
+        figs.append([k, tf,ef,lf,sf])
+    return figs
 
 def main(args):
     print(args)
     all_data = train_eval_merge(train_merge(args.trains), eval_merge(args.evals))
-    plot(all_data)
+    figures = plot(all_data)
+    if args.save is None:
+        plt.show()
+    else:
+        for group in figures:
+            prefix = args.save+'_'+group[0]+'_'
+            for fig in group[1:]:
+                outName = prefix+fig.axes[0].title.properties()['text'].replace(' ', '_')+'.png'
+                print(outName)
+                fig.savefig(outName, format='png')
 
 if __name__ == '__main__':
     main(parse(build()))
