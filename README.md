@@ -22,8 +22,8 @@ The JSON files produced in step 4 should be passed to `src/artifacts/plot.py` (s
 ## Summary Evaluations:
 
 * The pretrained Google BERT L model (used as a baseline) receives a SacreBLEU score of 19.75294850048873.
-* The basic transformer model (without pretrained embeddings) receives a peak SacreBLEU score of <tbd>.
-* The basic transformer model with BERT pretrained embeddings recevies a peak SacreBLEU score of <tbd>.
+* The basic transformer model (without pretrained embeddings) receives a peak SacreBLEU score of 0.001334493082716761.
+* The basic transformer model with BERT pretrained embeddings recevies a peak SacreBLEU score of 0.001279603793868831.
 
 ## Roadmap:
 1. Setup
