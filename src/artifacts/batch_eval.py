@@ -20,7 +20,10 @@ def main(args):
     # Fetch dataset
     data = load_wmt14()
     # Load cache of evaluations
-    cache_evals = torch.load(args.cache)
+    try:
+        cache_evals = torch.load(args.cache)
+    except Exception:
+        cache_evals = {}
     # Iterate through model states to evaluate
     # args.nhid is overwritten by the model.__init__() call, which is pretty bad design but
     # we can fix it here by tracking if it should be reset or not

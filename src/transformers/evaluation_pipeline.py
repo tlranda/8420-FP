@@ -22,11 +22,13 @@ def get_pretrained(device=None):
 # Sample translation process for huggingface transformer
 def dummy_pretrain(tok, model, tl=None, device='cpu'):
     if tl is None:
-        tl = "Wiederaufnahme der Sitzungsperiode"
-    inputs = tok(tl, return_tensors="pt", add_special_tokens=False)
+        tl = ["Wiederaufnahme der Sitzungsperiode"]
+    inputs = tok(tl, return_tensors="pt", add_special_tokens=False, padding=True)
     iids = inputs.input_ids.to(device)
+    iids[iids == 31951] = 0
     oids = model.generate(iids)
-    outputs = tok.decode(torch.LongTensor([_ for _ in oids[0] if _ != 1 and _ != 2]), skip_special_tokens=True)
+    outputs = [tok.decode(torch.LongTensor([_ for _ in oos if _ != 1 and _ != 2]), skip_special_tokens=True) for oos in oids]
+    outputs = [" ".join([_ for _ in out.split() if _ != "<pad>"]) for out in outputs]
     return outputs
 
 # Using the test split from data and a lambda of de -> en, get bleu stats
@@ -49,14 +51,19 @@ def evaluate(data, make_translate_lambda, batch_size=10, limit=None):
         if limit is not None and idx >= limit:
             break
         try:
-            predicted_candidates = [[_] for _ in make_translate_lambda(tl_pair['translation']['de'])]
+            translation = make_translate_lambda(tl_pair['translation']['de'])
+            if type(translation) is str:
+                predicted_candidates = [translation]
+            else:
+                predicted_candidates = [[_] for _ in translation]
         except IndexError:
             errors = errors + 1
-            eval_bar.set_postfix(errors=errors)
+            eval_bar.set_postfix(can_len=len(candidates), ref_len=len(refs), errors=errors)
             eval_bar.update(1)
             continue
         candidates.extend(predicted_candidates)
         refs.extend([[_] for _ in tl_pair['translation']['en']])
+        eval_bar.set_postfix(can_len=len(candidates), ref_len=len(refs), errors=errors)
         eval_bar.update(1)
     bleu_scorer = load_sacrebleu()
     print()
@@ -79,6 +86,9 @@ def main():
     tokenizer, model = get_pretrained(device=device)
     # Final evaluation
     pretrain_translator = lambda de: dummy_pretrain(tokenizer, model, tl=de, device=device)
+    print(f"[DE (input)]: Wiederaufnahme der Sitzungsperiode")
+    print(f"[EN (truth)]: Resumption of the Session")
+    print(f"[EN (model)]: {dummy_pretrain(tokenizer, model, device=device)}")
     print(evaluate(data['test'], pretrain_translator, batch_size=args.batch_size, limit=args.limit))
 
 if __name__ == '__main__':
