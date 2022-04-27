@@ -2,7 +2,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import argparse
 import json
-import pdb
+import os
 
 def build():
     prs = argparse.ArgumentParser()
@@ -26,7 +26,7 @@ def train_merge(tli):
     d = {}
     for fname in tli:
         with open(fname, 'r') as fin:
-            d[train_name(fname)] = json.load(fin)
+            d[train_name(os.path.basename(fname))] = json.load(fin)
     return d
 # Merge a number of parsed evaluation files
 def eval_merge(eli):
@@ -86,7 +86,7 @@ def examples_per_epoch_plot(series, **kwargs):
         for idx, miniseries in enumerate(series):
             epochs = [_ for _ in range(len(miniseries))]
             plt.plot(epochs, miniseries, label=nth_choice('series_name', idx))
-        plot.legend()
+        plt.legend()
     else:
         epochs = [_ for _ in range(len(series))]
         plt.plot(epochs, series)
@@ -103,7 +103,7 @@ def loss_per_epoch_plot(series, **kwargs):
         for idx, miniseries in enumerate(series):
             epochs = [_ for _ in range(len(miniseries))]
             plt.plot(epochs, miniseries, label=nth_choice('series_name', idx))
-        plot.legend()
+        plt.legend()
     else:
         epochs = [_ for _ in range(len(series))]
         plt.plot(epochs, series)
@@ -120,7 +120,7 @@ def score_per_epoch_plot(series, **kwargs):
         for idx, miniseries in enumerate(series):
             epochs = [_ for _ in range(len(miniseries))]
             plt.plot(epochs, miniseries, label=nth_choice('series_name', idx))
-        plot.legend()
+        plt.legend()
     else:
         epochs = [_ for _ in range(len(series))]
         plt.plot(epochs, series)
@@ -137,14 +137,7 @@ def plot(data):
     names = list(data.keys())
     for func, key, args in zip(funcs, value_keys, extra_args):
         args['series_name'] = names
-        figs.append(func([[vv[key] for vv in v.values()] for k,v in data.items()], args))
-    #for k,v in data.items():
-    #    print(f"Plots for {k}")
-    #    tf = time_per_epoch_plot([vv['time'] for vv in v.values()])
-    #    ef = examples_per_epoch_plot([vv['seen'] for vv in v.values()])
-    #    lf = loss_per_epoch_plot([vv['loss'] for vv in v.values()])
-    #    sf = score_per_epoch_plot([vv['score'] for vv in v.values()])
-    #    figs.append([k, tf,ef,lf,sf])
+        figs.append(func([[vv[key] for vv in v.values()] for k,v in data.items()], **args))
     return figs
 
 def main(args):
@@ -154,12 +147,11 @@ def main(args):
     if args.save is None:
         plt.show()
     else:
-        for group in figures:
-            prefix = args.save+'_'+group[0]+'_'
-            for fig in group[1:]:
-                outName = prefix+fig.axes[0].title.properties()['text'].replace(' ', '_')+'.png'
-                print(outName)
-                fig.savefig(outName, format='png')
+        for fig in figures:
+            prefix = args.save+'_'
+            outName = prefix+fig.axes[0].title.properties()['text'].replace(' ', '_')+'.png'
+            print(outName)
+            fig.savefig(outName, format='png')
 
 if __name__ == '__main__':
     main(parse(build()))
