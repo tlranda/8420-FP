@@ -27,6 +27,7 @@ def parse(prs, args=None):
             elif 'train' in fname.lower():
                 new_modes.append('train')
             else:
+                # User can label appropriately when system fails to understand
                 print(f"Unable to identify mode for {fname}. Pick [t]rain or [e]val?")
                 choice = input()
                 while choice not in ['t', 'train', 'e', 'eval']:
@@ -116,7 +117,7 @@ def train_parse(fname, args):
                         if this_iter != final_iter:
                             continue
                         training_flag = True
-                        # Get epoch time, skip count = broken + too_big, 
+                        # Get epoch time, skip count = broken + too_big
                         epoch_time = line[line.index('[')+1:line.index('<')]
                         broken = int(line[line.index('broken=')+len('broken='):line.index(', max')])
                         too_big = int(line[line.index('too_big=')+len('too_big='):line.index(']')])
