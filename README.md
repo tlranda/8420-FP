@@ -1,27 +1,29 @@
 # 8420-FP
 Spring 2022 under Dr. Kai Liu @ Clemson SC
 
-## First-Time Setup
-To set up your environment and download all necessary data, just ONCE, execute `. first_setup.sh`.
-The script includes a few outputs to ensure that everything runs as expected.
+## Instructions for Replication:
+### 1. Set up your environment.
+Run the `first_setup.sh` script (configured for Palmetto cluster with their modulesystem) to create your environment and install all necessary software.
+The script includes minor validation along the way to aid in troubleshooting.
+Future uses can run `setup.sh` to skip the installation steps, though troubleshooting validation still runs (can test if your existing environment is compatible with the project by editing the python environment selection in the first few lines).
+### 2. Run the training script.
+It is recommended to run `qsub.sh` via the PBS scheduler, but you may reference `python train_pipeline.py --help` for complete argument specification.
+If running interactively, all stderr output should be redirected to file for later use.
+### 3. During and/or after training, run the evaluation script.
+To allow for node-parallel, dynamically scheduled evaluation, run `qsub_eval.sh` to evaluate your training epoch checkpoints.
+If running interactively, all stdout output should be redirected to file for later use.
+### 4. Parse train and evaluation output.
+The saved outputs from steps 2 and 3 should be suitable inputs to `parse.py` (see `python parse.py --help` for assistance), which will produce json outputs similar to the ones included in this repository.
+Due to the size of the model checkpoints and training error files, the necessary binary and logs to reproduce these JSON outputs are not directly included in the repository, however, sufficiently similar outputs should be replicable by feeding outputs from steps 2 and 3 as described here.
+### 5. Produce plots.
+The JSON files produced in step 4 should be passed to `plot.py` (see `python plot.py --help` for assistance), which willl create the figures used in our deliverables.
 
-## Future Setups
-Prior to running the scripts, execute `. setup.sh` to ensure your environment is ready to run.
-The script repeats validation output to ensure everything is OK.
+## Summary Evaluations:
 
-## Short notes:
-[SacreBLEU](https://github.com/mjpost/sacreBLEU) has useful examples in the main README to show how to PROPERLY evaluate scores
-
-Google BERT L pretrained model (as a baseline) has test evaluation as follows:
-{'score': 19.75294850048873,
- 'counts': [34080, 15866, 8704, 5005],
- 'totals': [66956, 63953, 60951, 57949],
- 'precisions': [50.89909791504869, 24.808843994808687, 14.280323538580172, 8.636904864622341],
- 'bp': 0.9943258550353491,
- 'sys_len': 66956,
- 'ref_len': 67337}
-real    36m33.081s
-
+* The pretrained Google BERT L model (used as a baseline) receives a SacreBLEU score of 19.75294850048873.
+* The basic transformer model (without pretrained embeddings) receives a peak SacreBLEU score of <tbd>.
+* The basic transformer model with BERT pretrained embeddings recevies a peak SacreBLEU score of <tbd>.
+ 
 ## Roadmap:
 1. Setup
    + [:white_check_mark:] Create environment and automate gathering Python dependencies etc as much as possible
@@ -29,13 +31,13 @@ real    36m33.081s
 3. Evaluation Pipeline
    + [:white_check_mark:] Using a dummy model that can "cheat," show how the dataset can be loaded, iterated for training
    + [:white_check_mark:] Get semantic evaluation of quality (BLEU score) for the dummy model's predictions
-   + [:arrows_counterclockwise:] Get hardware metrics about performance of the dummy model (memory consumption, FLOP/s, walltime, cache utilization, etc)
+   + [:x:] [SCOPE CUT] Get hardware metrics about performance of the dummy model (memory consumption, FLOP/s, walltime, cache utilization, etc)
 5. Trainable Transformers
    + [:white_check_mark:] Basic transformer model (use pytorch transformer models)
-   + [:arrows_counterclockwise:] Locality Sensitive Hashed Attention
-   + [:arrows_counterclockwise:] Reversible Transformer
-   + [:arrows_counterclockwise:] Chunked Parameter Groups
-   + [:orange_square:] Reformer transformer model (may be from paper source or simply combine all techniques)
+   + [:x:] [SCOPE CUT] Locality Sensitive Hashed Attention
+   + [:x:] [SCOPE CUT] Reversible Transformer
+   + [:x:] [SCOPE CUT] Chunked Parameter Groups
+   + [:arrows_counterclockwise:] Reformer transformer model (may be from paper source or simply combine all techniques)
 6. Evaluation and Report
    + [:pushpin:] Use Pipeline to get semantic and hardware metrics for all built transformers
    + [:chart_with_upwards_trend:] Generate meaningful tables, graphics to explain key insights from ablative study

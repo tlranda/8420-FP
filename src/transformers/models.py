@@ -93,7 +93,7 @@ class torch_wrapped(torch.nn.Module):
             # Have to exit the try/except clause to de-allocate any tensors created in the block
             pass
         except Exception as e: # Weird bug, i think it's gone now
-            print("\nunknown bug:",e.__name__)
+            print("\nunknown bug:",e.__class__.__name__)
             print(src_inputs is None, tgt_inputs is None)
             if hasattr(e, 'message'):
                 print(e.message)
