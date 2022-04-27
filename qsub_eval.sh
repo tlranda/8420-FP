@@ -12,6 +12,7 @@ conda activate 8420;
 which python;
 
 date;
+# Expect ~0.5 hours per model evaluation.
 python batch_eval.py --dir saved;
 date;
 
