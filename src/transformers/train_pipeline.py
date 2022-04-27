@@ -12,17 +12,20 @@ import models
 def build():
     prs = argparse.ArgumentParser()
     prs.add_argument('--model', type=str, choices=models.choices, default=models.choices[0], help='Model to train')
+    # Hyperparameters
+    prs.add_argument('--seed', type=int, default=2022, help='RNG Seed')
     prs.add_argument('--nhid', type=int, default=None, help='Hidden units per layer (Leave unspecified to use pretrained BERT embeddings)')
     prs.add_argument('--nlayers', type=int, default=2, help='Number of layers')
     prs.add_argument('--nhead', type=int, default=2, help='Number of heads in encoder/decoder blocks')
     prs.add_argument('--lr', type=float, default=20, help='Initial learning rate')
     prs.add_argument('--dropout', type=float, default=0.2, help='Dropout per layer (0 = no dropout)')
+    # Iteration Controls
     prs.add_argument('--epochs', type=int, default=40, help='Upper epoch limit')
     prs.add_argument('--batch-size', type=int, default=256, help='Training batch size')
     prs.add_argument('--eval-size', type=int, default=10, help='Evaluation batch size (usually should be significantly lower than train)')
-    prs.add_argument('--seed', type=int, default=2022, help='RNG Seed')
     prs.add_argument('--eval-limit', type=int, default=None, help='Maximum number of examples to evaluate (default all)')
     prs.add_argument('--train-limit', type=int, default=None, help='Maximum number of examples to train each epoch (default all)')
+    # Persistence
     prs.add_argument('--save', type=str, default=None, help='Path and prefix to save epoch results to (default None)')
     prs.add_argument('--load', type=str, default=None, help='Path and prefix to load partial results from (default None)')
     prs.add_argument('--skip-load', type=str, default=None, help='Path to load serialized batch ids to skip from (default None)')
@@ -61,7 +64,7 @@ def main(args):
         # Save
         if args.save is not None:
             torch.save(transformer.state_dict(), args.save+'epoch_'+str(epoch)+'.pt')
-        # Validate
+        # Validation not performed to save time
         epoch_bar.set_postfix(loss=loss)
         epoch_bar.update(1)
     # Serialize skippable batches

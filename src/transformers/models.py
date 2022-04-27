@@ -3,8 +3,6 @@ import transformers
 import tqdm
 import re
 
-import pdb
-
 # Main inheritance class that defines the Train/Eval API all other models (subclassed) should use
 class torch_wrapped(torch.nn.Module):
     def __init__(self, args):
@@ -26,15 +24,6 @@ class torch_wrapped(torch.nn.Module):
         self.create_model(args)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr)
         self.loss_fn = torch.nn.CrossEntropyLoss()
-
-    def update_default_pbar(self):
-        # Set default info for progress bar update
-        if self.args.device.startswith('cuda'):
-            self.default_pbar = {'alloc': f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}",
-                                 'reserved': f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}",
-                                 'max': self.avail,}
-        elif self.default_pbar is None:
-            self.default_pbar = {'cpu': 'TRUE'}
 
     # Function to be extended/overwritten by subclasses, which should inject necessary modifications into the basic model architecture
     def create_model(self, args):
@@ -106,6 +95,15 @@ class torch_wrapped(torch.nn.Module):
             raise ValueError("Cannot recurse to sub-example level")
         return self.train_batch(src_inputs=src_inputs[:n_inputs//2,:], tgt_inputs=tgt_inputs[:n_inputs//2,:]) +\
                self.train_batch(src_inputs=src_inputs[n_inputs//2:,:], tgt_inputs=tgt_inputs[n_inputs//2:,:])
+
+    def update_default_pbar(self):
+        # Set default info for progress bar update
+        if self.args.device.startswith('cuda'):
+            self.default_pbar = {'alloc': f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}",
+                                 'reserved': f"{torch.cuda.memory_allocated(self.args.device)/(1024**3):.4f}",
+                                 'max': self.avail,}
+        elif self.default_pbar is None:
+            self.default_pbar = {'cpu': 'TRUE'}
 
     def pbar_update(self, pbar, **extra):
         self.update_default_pbar()
