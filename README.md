@@ -7,10 +7,10 @@ Run the `src/setup/first_setup.sh` script (configured for Palmetto cluster with 
 The script includes minor validation along the way to aid in troubleshooting.
 Future uses can run `src/setup/setup.sh` to skip the installation steps, though troubleshooting validation still runs (can test if your existing environment is compatible with the project by editing the python environment selection in the first few lines).
 ### 2. Run the training script.
-It is recommended to run `qsub.sh` via the PBS scheduler, but you may reference `python src/transformers/train_pipeline.py --help` for complete argument specification.
+It is recommended to run `qsub.sh` via the PBS scheduler (after editing its omitted CD command to ensure all paths are correct!), but you may reference `python src/transformers/train_pipeline.py --help` for complete argument specification.
 If running interactively, all stderr output should be redirected to file for later use.
 ### 3. During and/or after training, run the evaluation script.
-To allow for node-parallel, dynamically scheduled evaluation, run `qsub_eval.sh` to evaluate your training epoch checkpoints.
+To allow for node-parallel, dynamically scheduled evaluation, run `qsub_eval.sh` (again, after editing its omitted CD command to ensure all paths are correct!) to evaluate your training epoch checkpoints.
 If running interactively, all stdout output should be redirected to file for later use.
 ### 4. Parse train and evaluation output.
 The saved outputs from steps 2 and 3 should be suitable inputs to `src/artifacts/parse.py` (see `python src/artifacts/parse.py --help` for assistance), which will produce json outputs similar to the ones included in this repository.
