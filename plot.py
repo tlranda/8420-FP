@@ -131,13 +131,20 @@ def score_per_epoch_plot(series, **kwargs):
 
 def plot(data):
     figs = []
-    for k,v in data.items():
-        print(f"Plots for {k}")
-        tf = time_per_epoch_plot([vv['time'] for vv in v.values()])
-        ef = examples_per_epoch_plot([vv['seen'] for vv in v.values()])
-        lf = loss_per_epoch_plot([vv['loss'] for vv in v.values()])
-        sf = score_per_epoch_plot([vv['score'] for vv in v.values()])
-        figs.append([k, tf,ef,lf,sf])
+    funcs = [time_per_epoch_plot, examples_per_epoch_plot, loss_per_epoch_plot, score_per_epoch_plot]
+    value_keys = ['time', 'seen', 'loss', 'score']
+    extra_args = [{}, {}, {}, {}]
+    names = list(data.keys())
+    for func, key, args in zip(funcs, value_keys, extra_args):
+        args['series_name'] = names
+        figs.append(func([[vv[key] for vv in v.values()] for k,v in data.items()], args))
+    #for k,v in data.items():
+    #    print(f"Plots for {k}")
+    #    tf = time_per_epoch_plot([vv['time'] for vv in v.values()])
+    #    ef = examples_per_epoch_plot([vv['seen'] for vv in v.values()])
+    #    lf = loss_per_epoch_plot([vv['loss'] for vv in v.values()])
+    #    sf = score_per_epoch_plot([vv['score'] for vv in v.values()])
+    #    figs.append([k, tf,ef,lf,sf])
     return figs
 
 def main(args):
