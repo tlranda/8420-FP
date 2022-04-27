@@ -68,7 +68,7 @@ def build():
     prs.add_argument('--nhid', type=int, default=None, help='Hidden units per layer (default PreTrainedBERT)')
     prs.add_argument('--nlayers', type=int, default=2, help='Number of layers')
     prs.add_argument('--nhead', type=int, default=2, help='Number of heads in encoder/decoder blocks')
-    prs.add_argument('--lr', type=float, default=20, help='Initial learning rate')
+    prs.add_argument('--lr', type=float, default=0.01, help='Initial learning rate')
     prs.add_argument('--dropout', type=float, default=0.2, help='Dropout per layer (0 = no dropout)')
     return prs
 
