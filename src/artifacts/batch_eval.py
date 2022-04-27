@@ -6,8 +6,10 @@ from evaluation_pipeline import (load_wmt14,
                                  torch)
 from models import (choices, lookup)
 import argparse
-import pdb
-
+"""
+    Evaluate the SacreBLEU score of many models in back-to-back fashion
+    Automatically performs some light persistence via cache to improve performance
+"""
 
 def main(args):
     print(args)
@@ -16,13 +18,20 @@ def main(args):
     # Fetch dataset
     data = load_wmt14()
     # Load cache of evaluations
-    cache_evals = torch.load('batch_eval_cache.pt')
+    cache_evals = torch.load(args.cache)
     # Iterate through model states to evaluate
+    # args.nhid is overwritten by the model.__init__() call, which is pretty bad design but
+    # we can fix it here by tracking if it should be reset or not
+    reset_nhid = args.nhid is None
     for f in args.files:
         if f not in cache_evals.keys() and not args.skip_uncached:
+            if reset_nhid:
+                args.nhid = None
             transformer = lookup[args.model](args)
+            # Load and apply the model parameters from file
             params = torch.load(f)
             transformer.load_state_dict(params)
+            # Create lambda function to allow for evaluation
             translator = lambda de: transformer.evaluate(de)
             # Add to cache
             cache_evals[f] = evaluate(data['test'], translator)
@@ -35,6 +44,8 @@ def main(args):
 
 def build():
     prs = argparse.ArgumentParser()
+    # Cache behavior
+    prs.add_argument('--cache', type=str, default='batch_eval_cache.pt', help='Cache file to utilize (default batch_eval_cache.pt)')
     prs.add_argument('--skip-uncached', action='store_true', help='Only show results in the cache, don\'t compute new ones')
     # Specify saved models to load
     prs.add_argument('--dir', type=str, nargs='*', default=None, help='Directory to read files from (default None)')
@@ -68,6 +79,7 @@ def parse(prs, args=None):
     if args.dir is not None:
         for d in args.dir:
             for f in os.listdir(d):
+                # Slap directory back on the path
                 f = d+'/'+f
                 if os.path.isfile(f) and f not in args.remove:
                     args.files.update([f])
@@ -81,3 +93,4 @@ def parse(prs, args=None):
 
 if __name__ == '__main__':
     main(parse(build()))
+
