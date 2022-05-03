@@ -45,3 +45,6 @@ The JSON files produced in step 4 should be passed to `src/artifacts/plot.py` (s
    + [:chart_with_upwards_trend:] Generate meaningful tables, graphics to explain key insights from ablative study
    + [:briefcase:] Deliver non-code items based on this information
 
+## Future Work:
+* Since we recover predictions by comparing to all embeddings, and embeddings roughly occupy the range of values [-2,2], it would be nice to help the model predict by enforcing this knowledge (clipping or some other technique perhaps?)
+

@@ -6,6 +6,7 @@
 hostname; date;
 
 # CD here (omitted)
+cd /path/to/src/transformers;
 
 module add anaconda3/2021.05-gcc cuda/11.1.0-gcc;
 conda activate 8420;
@@ -13,7 +14,7 @@ which python;
 
 date;
 # Expect ~0.5 hours per model evaluation.
-python batch_eval.py --dir saved;
+python ../artifacts/batch_eval.py --add saved/lowLRprebert_epoch_*;
 date;
 
 

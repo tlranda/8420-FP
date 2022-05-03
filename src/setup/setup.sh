@@ -7,7 +7,7 @@ conda activate 8420
 
 # Pytorch Dependency
 # Validation
-python -c "import torch; print('Torch Install OK?',torch.cuda.is_available())"
+python -c "import torch; print('Torch Install ready for GPU?',torch.cuda.is_available())"
 
 # Huggingfaces Dependency
 # Validation

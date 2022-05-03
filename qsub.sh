@@ -6,6 +6,7 @@
 hostname; date;
 
 # CD here (omitted)
+cd /path/to/src/transformers;
 
 module add anaconda3/2021.05-gcc cuda/11.1.0-gcc;
 conda activate 8420;
@@ -18,9 +19,11 @@ date;
 
 # Evaluations done without bert embeddings
 # Expected runtime: 2 days
-python train_pipeline.py --epochs 42 --save saved/attempt_two_ --skip-load bad_batches.txt --skip-save a2_bad.txt --eval-limit 0;
+#python train_pipeline.py --epochs 42 --save saved/attempt_two_ --skip-load bad_batches.txt --skip-save a2_bad.txt --eval-limit 0 --lr 20;
 # Evaluations done with bert embeddings
 # Expected runtime: 2 days
+#python train_pipeline.py --epochs 8 --save saved/preBERT_ --skip-save pre_bad.txt --eval-limit 0 --lr 20;
+# Updated hyperparameters (post-presentation)
 python train_pipeline.py --epochs 8 --save saved/preBERT_ --skip-save pre_bad.txt --eval-limit 0;
 
 date;
