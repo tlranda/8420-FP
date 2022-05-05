@@ -32,14 +32,9 @@ The JSON files produced in step 4 should be passed to `src/artifacts/plot.py` (s
 3. Evaluation Pipeline
    + [:white_check_mark:] Using a dummy model that can "cheat," show how the dataset can be loaded, iterated for training
    + [:white_check_mark:] Get semantic evaluation of quality (BLEU score) for the dummy model's predictions
-   + [:x:] [SCOPE CUT] Get hardware metrics about performance of the dummy model (memory consumption, FLOP/s, walltime, cache utilization, etc)
 5. Trainable Transformers
    + [:white_check_mark:] Basic transformer model (use pytorch transformer models)
    + [:white_check_mark:] Basic transformer model with proper embeddings (use pytorch transformer models and pretrained embeddings)
-   + [:x:] [SCOPE CUT] Locality Sensitive Hashed Attention
-   + [:x:] [SCOPE CUT] Reversible Transformer
-   + [:x:] [SCOPE CUT] Chunked Parameter Groups
-   + [:x:] [SCOPE CUT] Reformer transformer model (may be from paper source or simply combine all techniques)
 6. Evaluation and Report
    + [:pushpin:] Use Pipeline to get semantic and hardware metrics for all built transformers
    + [:chart_with_upwards_trend:] Generate meaningful tables, graphics to explain key insights from ablative study
